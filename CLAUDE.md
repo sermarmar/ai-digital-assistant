@@ -38,7 +38,7 @@ Cuatro servicios en `docker-compose.yml`:
 
 | Servicio | Tecnología | Función |
 |---|---|---|
-| `web` | React + TypeScript + Vite + Tailwind CSS | Captura de audio, interfaz, render del diagrama con `mermaid.js`, historial de reuniones, descargas. |
+| `web` | React + TypeScript + Vite + Tailwind CSS; en Docker se compila y lo sirve nginx (`http://localhost:8080`), que redirige `/api` a `api` | Captura de audio, interfaz, render del diagrama con `mermaid.js`, historial de reuniones, descargas. |
 | `api` | Node.js + TypeScript + Fastify con `@anthropic-ai/sdk` y Drizzle ORM | Recibe el audio, coordina `stt` y Claude, y guarda y lee reuniones en Postgres. Guarda la clave de Anthropic en variable de entorno. |
 | `stt` | Whisper local (por ejemplo `faster-whisper` en un contenedor con API HTTP) | Transcribe el audio a texto. |
 | `db` | PostgreSQL (imagen oficial `postgres`, versión fijada) | Persistencia, con volumen de Docker para que los datos sobrevivan a `docker compose down`. |
@@ -59,6 +59,7 @@ Notas sobre la base de datos:
 - Migraciones versionadas con Drizzle (`drizzle-kit`), que se aplican al arrancar `api` o con un comando explícito.
 - Healthcheck en `db` y `depends_on` con `condition: service_healthy` para que `api` espere a que Postgres esté listo.
 - No exponer el puerto 5432 al exterior salvo que haga falta para depurar, y en ese caso solo a `127.0.0.1`.
+- Todos los puertos publicados (`web` 8080, `api` 3000, `stt` 8000) van solo a `127.0.0.1`. Orden de arranque por healthchecks: `db` y `stt` → `api` → `web`.
 
 ## Arquitectura hexagonal (obligatoria en todos los servicios)
 
