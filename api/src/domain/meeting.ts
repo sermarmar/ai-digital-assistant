@@ -12,6 +12,8 @@ export interface Meeting {
   durationSeconds: number | null;
   language: string;
   status: MeetingStatus;
+  /** Motivo del fallo (estado "error") o aviso si algo no se pudo generar. */
+  errorMessage: string | null;
 }
 
 // Una reunión con todo lo que se ha generado a partir de ella.

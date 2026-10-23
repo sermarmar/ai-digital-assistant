@@ -14,6 +14,7 @@ export const meetings = pgTable('meetings', {
   durationSeconds: integer('duration_seconds'),
   language: text('language').notNull().default('es'),
   status: meetingStatus('status').notNull().default('transcribiendo'),
+  errorMessage: text('error_message'),
 });
 
 // Las tres tablas siguientes cuelgan de meetings (una fila por reunión como máximo)

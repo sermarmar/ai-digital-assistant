@@ -4,3 +4,10 @@ export class MeetingNotFoundError extends Error {
     this.name = 'MeetingNotFoundError';
   }
 }
+
+export class NoSpeechDetectedError extends Error {
+  constructor() {
+    super('No se ha detectado voz en el audio.');
+    this.name = 'NoSpeechDetectedError';
+  }
+}

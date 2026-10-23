@@ -48,7 +48,7 @@ Flujo: navegador graba → envía el audio a `api` → `api` lo pasa a `stt` →
 Variables de entorno (`.env`, no versionado; incluir un `.env.example`):
 - `CLAUDE_PROVIDER=subscription` (por defecto) o `api`
 - `ANTHROPIC_API_KEY` (solo en modo `api`; **debe estar vacía en modo `subscription`**, porque si existe se usa y se cobra por token)
-- Credencial de la suscripción para el contenedor `api` (método de autenticación a confirmar en la documentación de Claude Code)
+- `CLAUDE_CODE_OAUTH_TOKEN` (solo en modo `subscription`): token de un año generado con `claude setup-token`. El adaptador de suscripción solo pasa al subproceso de Claude Code una lista mínima de variables, así que `ANTHROPIC_API_KEY` nunca llega a usarse en ese modo.
 - `STT_URL` (por ejemplo `http://stt:8000`)
 - `DATABASE_URL` (por ejemplo `postgres://usuario:clave@db:5432/reuniones`)
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
@@ -77,7 +77,8 @@ infrastructure  →  application  →  domain
 | `domain/` | Entidades, value objects, errores de dominio y reglas de negocio. TypeScript puro. | Nada de fuera de `domain/`. Ni librerías (salvo utilidades del lenguaje), ni Fastify, ni Drizzle, ni SDKs. |
 | `application/ports/in/` | Puertos de entrada: interfaces de los casos de uso que la app ofrece. | `domain/` |
 | `application/ports/out/` | Puertos de salida: interfaces de lo que la app necesita del exterior (`Transcriber`, `TextGenerator`, `MeetingRepository`...). | `domain/` |
-| `application/use-cases/` | Implementaciones de los casos de uso. Reciben los puertos de salida por constructor. | `domain/`, `application/ports/` |
+| `application/use-cases/` | Implementaciones de los puertos de entrada: lo que se puede pedir desde fuera. Reciben sus dependencias por constructor. | `domain/`, `application/ports/`, `application/services/` y librerías puras sin E/S (como `zod`) |
+| `application/services/` | Lógica de aplicación que usan varios casos de uso (por ejemplo `MeetingSummarizer` y `DiagramGenerator`). Hablan con el exterior solo a través de puertos de salida. | `domain/`, `application/ports/out/` y librerías puras sin E/S |
 | `infrastructure/in/` | Adaptadores de entrada (driving): rutas HTTP, CLI... Traducen la petición y llaman a un puerto de entrada. | Todo lo anterior + librerías |
 | `infrastructure/out/` | Adaptadores de salida (driven): Postgres, Whisper, Claude... Implementan un puerto de salida. | Todo lo anterior + librerías |
 | `config/` | Lectura y validación de variables de entorno. | Librerías de validación |

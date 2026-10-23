@@ -1,6 +1,12 @@
-import { desc, eq } from 'drizzle-orm';
-import type { MeetingRepository } from '../../../application/ports/out/meeting-repository.js';
+import { desc, eq, inArray } from 'drizzle-orm';
+import type {
+  MeetingChanges,
+  MeetingRepository,
+} from '../../../application/ports/out/meeting-repository.js';
+import type { Diagram } from '../../../domain/diagram.js';
 import type { Meeting, MeetingDetail } from '../../../domain/meeting.js';
+import type { Summary } from '../../../domain/summary.js';
+import type { Transcript } from '../../../domain/transcript.js';
 import type { Database } from './database.js';
 import { diagrams, meetings, summaries, transcripts } from './schema.js';
 
@@ -8,6 +14,40 @@ type MeetingRow = typeof meetings.$inferSelect;
 
 export class PostgresMeetingRepository implements MeetingRepository {
   constructor(private readonly db: Database) {}
+
+  async create(title: string): Promise<Meeting> {
+    const [row] = await this.db.insert(meetings).values({ title }).returning();
+    if (!row) throw new Error('Postgres no ha devuelto la reunión creada');
+    return toMeeting(row);
+  }
+
+  async update(meetingId: string, changes: MeetingChanges): Promise<void> {
+    await this.db.update(meetings).set(changes).where(eq(meetings.id, meetingId));
+  }
+
+  async saveTranscript(meetingId: string, transcript: Transcript): Promise<void> {
+    await this.db.insert(transcripts).values({ meetingId, ...transcript });
+  }
+
+  async saveSummary(meetingId: string, summary: Summary): Promise<void> {
+    await this.db.insert(summaries).values({ meetingId, ...summary });
+  }
+
+  async saveDiagram(meetingId: string, diagram: Diagram): Promise<void> {
+    await this.db
+      .insert(diagrams)
+      .values({ meetingId, ...diagram })
+      .onConflictDoUpdate({ target: diagrams.meetingId, set: diagram });
+  }
+
+  async failUnfinished(errorMessage: string): Promise<number> {
+    const failed = await this.db
+      .update(meetings)
+      .set({ status: 'error', errorMessage })
+      .where(inArray(meetings.status, ['transcribiendo', 'resumiendo']))
+      .returning({ id: meetings.id });
+    return failed.length;
+  }
 
   async findAll(): Promise<Meeting[]> {
     const rows = await this.db.select().from(meetings).orderBy(desc(meetings.createdAt));
@@ -62,5 +102,6 @@ function toMeeting(row: MeetingRow): Meeting {
     durationSeconds: row.durationSeconds,
     language: row.language,
     status: row.status,
+    errorMessage: row.errorMessage,
   };
 }
