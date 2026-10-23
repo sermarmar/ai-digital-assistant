@@ -5,10 +5,12 @@ import type { FixDiagramUseCase } from '../../../application/ports/in/fix-diagra
 import type { GetMeetingUseCase } from '../../../application/ports/in/get-meeting.js';
 import type { ListMeetingsUseCase } from '../../../application/ports/in/list-meetings.js';
 import type { ProcessMeetingUseCase } from '../../../application/ports/in/process-meeting.js';
+import type { UpdateDiagramUseCase } from '../../../application/ports/in/update-diagram.js';
 import type { AudioFile } from '../../../domain/audio-file.js';
 
 const meetingParams = z.object({ id: z.uuid() });
 const fixDiagramBody = z.object({ mermaidCode: z.string().min(1), error: z.string().min(1) });
+const updateDiagramBody = z.object({ mermaidCode: z.string().min(1) });
 
 export function registerMeetingRoutes(
   app: FastifyInstance,
@@ -18,6 +20,7 @@ export function registerMeetingRoutes(
     deleteMeeting: DeleteMeetingUseCase;
     processMeeting: ProcessMeetingUseCase;
     fixDiagram: FixDiagramUseCase;
+    updateDiagram: UpdateDiagramUseCase;
   },
 ): void {
   app.get('/meetings', async () => useCases.listMeetings.execute());
@@ -61,5 +64,11 @@ export function registerMeetingRoutes(
     const { id } = meetingParams.parse(request.params);
     const { mermaidCode, error } = fixDiagramBody.parse(request.body);
     return useCases.fixDiagram.execute(id, mermaidCode, error);
+  });
+
+  app.put('/meetings/:id/diagram', async (request) => {
+    const { id } = meetingParams.parse(request.params);
+    const { mermaidCode } = updateDiagramBody.parse(request.body);
+    return useCases.updateDiagram.execute(id, mermaidCode);
   });
 }

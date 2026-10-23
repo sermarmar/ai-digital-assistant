@@ -8,6 +8,7 @@ import type { FixDiagramUseCase } from '../../../application/ports/in/fix-diagra
 import type { GetMeetingUseCase } from '../../../application/ports/in/get-meeting.js';
 import type { ListMeetingsUseCase } from '../../../application/ports/in/list-meetings.js';
 import type { ProcessMeetingUseCase } from '../../../application/ports/in/process-meeting.js';
+import type { UpdateDiagramUseCase } from '../../../application/ports/in/update-diagram.js';
 import { TextGenerationError, UsageLimitError } from '../../../application/ports/out/text-generator.js';
 import { MeetingNotFoundError } from '../../../domain/errors.js';
 import { registerHealthRoutes } from './health-routes.js';
@@ -22,6 +23,7 @@ export interface HttpUseCases {
   deleteMeeting: DeleteMeetingUseCase;
   processMeeting: ProcessMeetingUseCase;
   fixDiagram: FixDiagramUseCase;
+  updateDiagram: UpdateDiagramUseCase;
 }
 
 export function buildHttpServer(useCases: HttpUseCases): FastifyInstance {

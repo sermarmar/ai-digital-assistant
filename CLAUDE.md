@@ -91,7 +91,11 @@ Convenciones:
 - Los adaptadores convierten entre el modelo de dominio y su formato externo (filas de Drizzle, JSON HTTP, respuesta de Claude). Los tipos de Drizzle o de Fastify nunca salen de `infrastructure/`.
 - El acceso a Claude es el puerto `TextGenerator` con dos adaptadores (`subscription` y `api`); `main.ts` elige uno según `CLAUDE_PROVIDER`. Esto sustituye al "módulo único `claude-client.ts`".
 - Código (identificadores) en inglés; textos de interfaz, comentarios y mensajes de error de cara al usuario en español. Las claves del JSON que devuelve Claude (`resumen`, `decisiones`, `tareas`, `temas`) y los estados de reunión se quedan en español.
-- `web` sigue la misma idea con `domain/`, `application/`, `infrastructure/` y `ui/` (componentes React). `stt` (Python) usa las mismas tres capas aunque sea pequeño; como `in` es palabra reservada en Python, ahí las carpetas se llaman `ports/inbound`, `ports/outbound`, `infrastructure/inbound` e `infrastructure/outbound`, y los puertos son `typing.Protocol`.
+- `web` sigue la misma idea con `domain/`, `application/`, `infrastructure/` y `ui/`:
+  - `ui/` (componentes React) es el único adaptador de entrada. Llama directamente a las clases de `application/use-cases/`, que le llegan por contexto (`ui/services.tsx`); por eso en `web` no hay `ports/in` y los puertos de salida están en `application/ports/` sin subcarpeta.
+  - `infrastructure/` tiene los adaptadores de salida: `HttpMeetingGateway` (API vía `/api`), `BrowserAudioCapture` (`getDisplayMedia` + micrófono + Web Audio + `MediaRecorder`), `MermaidDiagramRenderer` y `BrowserFileSaver`.
+  - `main.tsx` es la raíz de composición. Los imports no llevan extensión `.js` (Vite resuelve los módulos), a diferencia de `api`.
+  - En desarrollo, Vite redirige `/api` al servicio `api` (`API_URL`, por defecto `http://127.0.0.1:3000`), así que no hace falta CORS. `stt` (Python) usa las mismas tres capas aunque sea pequeño; como `in` es palabra reservada en Python, ahí las carpetas se llaman `ports/inbound`, `ports/outbound`, `infrastructure/inbound` e `infrastructure/outbound`, y los puertos son `typing.Protocol`.
 
 ## Modelo de datos inicial (propuesta)
 

@@ -9,6 +9,7 @@ import { FixDiagram } from './application/use-cases/fix-diagram.js';
 import { GetMeeting } from './application/use-cases/get-meeting.js';
 import { ListMeetings } from './application/use-cases/list-meetings.js';
 import { ProcessMeeting } from './application/use-cases/process-meeting.js';
+import { UpdateDiagram } from './application/use-cases/update-diagram.js';
 import { loadEnv, type Env } from './config/env.js';
 import { buildHttpServer } from './infrastructure/in/http/server.js';
 import { ApiTextGenerator } from './infrastructure/out/claude/api-text-generator.js';
@@ -42,6 +43,7 @@ const useCases = {
   deleteMeeting: new DeleteMeeting(meetingRepository),
   processMeeting: new ProcessMeeting(meetingRepository, transcriber, summarizer, diagramGenerator, logger),
   fixDiagram: new FixDiagram(meetingRepository, diagramGenerator),
+  updateDiagram: new UpdateDiagram(meetingRepository),
 };
 
 // 3. Adaptador de entrada
