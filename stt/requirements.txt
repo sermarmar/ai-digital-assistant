@@ -1,0 +1,6 @@
+faster-whisper==1.2.1
+# faster-whisper 1.2.1 llama a av.open(metadata_errors=...), que PyAV 19 eliminó
+av==18.1.0
+fastapi==0.161.1
+uvicorn==0.54.0
+python-multipart==0.0.32

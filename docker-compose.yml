@@ -18,6 +18,27 @@ services:
     # ports:
     #   - "127.0.0.1:5432:5432"
 
+  stt:
+    build: ./stt
+    restart: unless-stopped
+    environment:
+      WHISPER_MODEL: ${WHISPER_MODEL:-small}
+      WHISPER_LANGUAGE: ${WHISPER_LANGUAGE-es}
+      WHISPER_DEVICE: cpu
+      WHISPER_COMPUTE_TYPE: int8
+    volumes:
+      # Cache del modelo de Whisper, para no descargarlo en cada arranque
+      - stt-models:/models
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      # La primera vez descarga el modelo, así que puede tardar en estar listo
+      start_period: 10m
+
   api:
     build: ./api
     restart: unless-stopped
@@ -32,3 +53,4 @@ services:
 
 volumes:
   db-data:
+  stt-models:
