@@ -76,3 +76,7 @@ yarn-error.log
 
 # Página de Mermaid generada en postinstall (scripts/build-mermaid-page.mjs)
 assets/mermaid-page.html
+
+# Apps portables generadas por scripts/build-*-portable.*
+dist/
+build.binlog
