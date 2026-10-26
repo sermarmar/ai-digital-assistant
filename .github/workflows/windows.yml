@@ -1,0 +1,70 @@
+# Compila la app de Windows y la deja como carpeta portable (se abre sin instalar nada).
+# El resultado se descarga desde la pestaña Actions del repositorio, en "Artifacts".
+name: App Windows (portable)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [app-react-native]
+    paths:
+      - 'app/**'
+      - '.github/workflows/windows.yml'
+
+jobs:
+  build:
+    runs-on: windows-2025-vs2026
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Enlazar los módulos nativos (autolink)
+        run: npx react-native autolink-windows --no-telemetry
+
+      - uses: microsoft/setup-msbuild@v3
+
+      - name: Compilar (Release x64)
+        run: msbuild windows/MeetingAssistant.sln /t:MeetingAssistant /p:Configuration=Release /p:Platform=x64 /restore /p:RestorePackagesConfig=true /m /bl:build.binlog
+
+      - name: Preparar la carpeta portable
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path windows -Recurse -Filter MeetingAssistant.exe |
+            Where-Object { $_.FullName -match '\\Release\\' -and $_.FullName -notmatch '\\obj\\' } |
+            Select-Object -First 1
+          if (-not $exe) { throw 'No se ha encontrado MeetingAssistant.exe' }
+
+          $portable = Join-Path $env:RUNNER_TEMP 'AsistenteReuniones'
+          Copy-Item $exe.DirectoryName $portable -Recurse
+          # Lo que solo sirve para compilar o depurar no hace falta para ejecutar
+          Get-ChildItem $portable -Recurse -Include *.pdb, *.lib, *.exp, *.ilk | Remove-Item
+
+          # Runtime de Visual C++ junto al .exe, por si el equipo no lo tiene instalado
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $crt = & $vswhere -latest -find 'VC\Redist\MSVC\*\x64\Microsoft.VC*.CRT' | Select-Object -Last 1
+          Copy-Item "$crt\*.dll" $portable
+
+          Get-ChildItem $portable | Format-Table Name, Length
+          "PORTABLE_DIR=$portable" >> $env:GITHUB_ENV
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: AsistenteReuniones-windows-x64
+          path: ${{ env.PORTABLE_DIR }}
+
+      - name: Guardar el log de compilación si falla
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-log
+          path: app/build.binlog

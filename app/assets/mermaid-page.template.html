@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #ffffff;
+      }
+      #diagram {
+        padding: 16px;
+      }
+      #diagram svg {
+        max-width: 100%;
+        height: auto;
+      }
+    </style>
+    <script>
+      /*MERMAID*/
+    </script>
+  </head>
+  <body>
+    <div id="diagram"></div>
+    <script>
+      // La app y esta página se hablan por mensajes JSON:
+      //   app → página: window.handleRequest({ id, action: 'validate' | 'svg' | 'png' | 'show', code })
+      //   página → app: { id, ok: true, result } o { id, ok: false, error }
+      const PNG_SCALE = 2;
+
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: 'strict',
+        theme: 'default',
+        // Etiquetas como texto SVG y no como HTML: con HTML no se puede pasar a PNG
+        htmlLabels: false,
+      });
+
+      let renderCount = 0;
+
+      function reply(message) {
+        window.ReactNativeWebView.postMessage(JSON.stringify(message));
+      }
+
+      async function renderSvg(code) {
+        renderCount += 1;
+        const { svg } = await mermaid.render('diagrama-' + renderCount, code);
+        return svg;
+      }
+
+      // Dibuja el SVG en un canvas a doble resolución y lo devuelve como PNG en base64 con fondo blanco
+      async function renderPng(code) {
+        const svgElement = new DOMParser().parseFromString(await renderSvg(code), 'image/svg+xml').documentElement;
+        const [, , width = 800, height = 600] = (svgElement.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number);
+        svgElement.setAttribute('width', String(width));
+        svgElement.setAttribute('height', String(height));
+
+        const image = new Image();
+        image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svgElement));
+        await image.decode();
+
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.ceil(width * PNG_SCALE);
+        canvas.height = Math.ceil(height * PNG_SCALE);
+        const context = canvas.getContext('2d');
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, '');
+      }
+
+      const actions = {
+        async validate(code) {
+          try {
+            await mermaid.parse(code);
+            return null;
+          } catch (error) {
+            return error instanceof Error ? error.message : String(error);
+          }
+        },
+        svg: renderSvg,
+        png: renderPng,
+        // Pinta el diagrama en la propia página, para verlo dentro de la app
+        async show(code) {
+          const svg = await renderSvg(code);
+          document.getElementById('diagram').innerHTML = svg;
+          return svg;
+        },
+      };
+
+      window.handleRequest = async ({ id, action, code }) => {
+        try {
+          reply({ id, ok: true, result: await actions[action](code) });
+        } catch (error) {
+          reply({ id, ok: false, error: error instanceof Error ? error.message : String(error) });
+        }
+      };
+
+      reply({ id: 'ready', ok: true, result: null });
+    </script>
+  </body>
+</html>
