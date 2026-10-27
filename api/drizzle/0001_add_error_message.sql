@@ -1,1 +1,0 @@
-ALTER TABLE "meetings" ADD COLUMN "error_message" text;

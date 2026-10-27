@@ -14,7 +14,7 @@ const SUBPROCESS_ENV_VARS = ['PATH', 'HOME', 'USER', 'TMPDIR', 'LANG', 'CLAUDE_C
 
 // Modo "subscription": usa la suscripción de Claude (plan Pro) a través del Agent SDK.
 // El Agent SDK es Claude Code como librería; aquí se usa como simple generador de texto.
-// Se autentica con CLAUDE_CODE_OAUTH_TOKEN o, fuera de Docker, con el login de Claude Code.
+// Se autentica con CLAUDE_CODE_OAUTH_TOKEN o, si está vacío, con el login de Claude Code de este ordenador.
 export class SubscriptionTextGenerator implements TextGenerator {
   async generate({ model, system, prompt }: TextGenerationRequest): Promise<string> {
     const messages = query({

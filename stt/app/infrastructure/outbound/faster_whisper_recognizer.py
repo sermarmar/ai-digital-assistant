@@ -9,7 +9,7 @@ from app.domain.transcript import Transcript, TranscriptSegment
 
 class FasterWhisperRecognizer:
     def __init__(self, model_size: str, device: str, compute_type: str) -> None:
-        # La primera vez descarga el modelo de Hugging Face a HF_HOME (volumen de Docker)
+        # La primera vez descarga el modelo de Hugging Face a HF_HOME (scripts/start.sh lo apunta a data/models)
         self._model = WhisperModel(model_size, device=device, compute_type=compute_type)
 
     def recognize(self, audio: bytes, language: str | None) -> Transcript:

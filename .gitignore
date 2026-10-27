@@ -5,3 +5,8 @@ dist/
 .DS_Store
 __pycache__/
 *.pyc
+
+# Datos locales: base de datos SQLite y modelo de Whisper
+data/
+# Entorno de Python de stt
+stt/.venv/

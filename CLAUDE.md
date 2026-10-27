@@ -1,4 +1,4 @@
-# Asistente de reuniones con IA (web, local con Docker) — Contexto del proyecto
+# Asistente de reuniones con IA (web, en local con SQLite) — Contexto del proyecto
 
 ## Reglas de trabajo (importante)
 
@@ -10,7 +10,7 @@
 
 ## Objetivo
 
-Aplicación **web** que corre **en local con Docker**. Graba el audio de lo que el usuario comparte (videollamada, página web, chat, reunión de financiación, etc.), lo transcribe y genera:
+Aplicación **web** que corre **en local, sin Docker**. Graba el audio de lo que el usuario comparte (videollamada, página web, chat, reunión de financiación, etc.), lo transcribe y genera:
 
 1. Un **resumen** estructurado.
 2. Un **esquema en forma de diagrama** (mapa mental, flowchart o timeline).
@@ -19,10 +19,10 @@ Es, en esencia, un asistente de reunión con IA.
 
 ## Decisiones tomadas
 
-- Plataforma: **web**, sin Electron ni Tauri.
-- Ejecución: **local con Docker** (`docker compose up`).
-- Base de datos: **PostgreSQL en Docker** (contenedor propio en el `docker-compose.yml`, con volumen persistente). **No se usa Supabase.** El backend propio (`api`) es el único que habla con la base de datos; el navegador nunca accede directamente.
-- Qué se guarda: transcripción, resumen, decisiones, tareas, temas y diagrama Mermaid. **El audio no se guarda por defecto** (se descarta tras transcribir); si más adelante se quiere conservar, se guardaría como archivo en un volumen de Docker, nunca dentro de Postgres.
+- Plataforma: **web**, sin Electron ni Tauri. (Se probó una app de escritorio con React Native en la rama `app-react-native`; se abandonó porque en Windows se cerraba al abrirla. La rama se conserva.)
+- Ejecución: **en local, sin Docker** (`scripts/setup.sh` la primera vez y `scripts/start.sh` para arrancar). Docker Desktop daba problemas en el Mac de Sergio (Intel, disco casi lleno).
+- Base de datos: **SQLite**, un archivo local (`data/reuniones.db`, configurable con `DATABASE_PATH`) a través de `better-sqlite3` y Drizzle. **No se usa Supabase ni Postgres.** El backend propio (`api`) es el único que habla con la base de datos; el navegador nunca accede directamente.
+- Qué se guarda: transcripción, resumen, decisiones, tareas, temas y diagrama Mermaid. **El audio no se guarda por defecto** (se descarta tras transcribir); si más adelante se quiere conservar, se guardaría como archivo dentro de `data/`, nunca dentro de la base de datos.
 - Sin cuentas de usuario por ahora (uso personal en local).
 - El resultado también se puede descargar (Markdown, JSON, SVG/PNG del diagrama).
 - IA generativa: **solo Claude**. Sergio tiene el **plan Pro**, así que el modo por defecto es usar su suscripción mediante el Agent SDK (sin coste por token), con la API de Anthropic (de pago por token) como alternativa intercambiable. Ver la sección "Proveedor de Claude".
@@ -34,32 +34,34 @@ Definir si es una herramienta personal o un producto para publicar. Por ahora es
 
 ## Arquitectura
 
-Cuatro servicios en `docker-compose.yml`:
+Tres procesos que arranca `scripts/start.sh` en la misma terminal (`Ctrl+C` los para todos):
 
-| Servicio | Tecnología | Función |
+| Parte | Tecnología | Función |
 |---|---|---|
-| `web` | React + TypeScript + Vite + Tailwind CSS; en Docker se compila y lo sirve nginx (`http://localhost:8080`), que redirige `/api` a `api` | Captura de audio, interfaz, render del diagrama con `mermaid.js`, historial de reuniones, descargas. |
-| `api` | Node.js + TypeScript + Fastify con `@anthropic-ai/sdk` y Drizzle ORM | Recibe el audio, coordina `stt` y Claude, y guarda y lee reuniones en Postgres. Guarda la clave de Anthropic en variable de entorno. |
-| `stt` | Whisper local (por ejemplo `faster-whisper` en un contenedor con API HTTP) | Transcribe el audio a texto. |
-| `db` | PostgreSQL (imagen oficial `postgres`, versión fijada) | Persistencia, con volumen de Docker para que los datos sobrevivan a `docker compose down`. |
+| `web` | React + TypeScript + Vite + Tailwind CSS; servidor de desarrollo de Vite (`http://localhost:5173`), que redirige `/api` a `api` | Captura de audio, interfaz, render del diagrama con `mermaid.js`, historial de reuniones, descargas. |
+| `api` | Node.js + TypeScript + Fastify con `@anthropic-ai/sdk`, Drizzle ORM y `better-sqlite3` (`127.0.0.1:3000`) | Recibe el audio, coordina `stt` y Claude, y guarda y lee reuniones en SQLite. Lee las credenciales de Claude del `.env` (`node --env-file=.env`). |
+| `stt` | Python + FastAPI + `faster-whisper` en un entorno virtual (`stt/.venv`), servido con uvicorn (`127.0.0.1:8000`) | Transcribe el audio a texto. |
 
-Flujo: navegador graba → envía el audio a `api` → `api` lo pasa a `stt` → texto → `api` llama a Claude → resumen JSON + Mermaid → `api` lo guarda en `db` → el navegador lo muestra.
+Flujo: navegador graba → envía el audio a `api` → `api` lo pasa a `stt` → texto → `api` llama a Claude → resumen JSON + Mermaid → `api` lo guarda en SQLite → el navegador lo muestra.
 
 Variables de entorno (`.env`, no versionado; incluir un `.env.example`):
 - `CLAUDE_PROVIDER=subscription` (por defecto) o `api`
 - `ANTHROPIC_API_KEY` (solo en modo `api`; **debe estar vacía en modo `subscription`**, porque si existe se usa y se cobra por token)
 - `CLAUDE_CODE_OAUTH_TOKEN` (solo en modo `subscription`): token de un año generado con `claude setup-token`. El adaptador de suscripción solo pasa al subproceso de Claude Code una lista mínima de variables, así que `ANTHROPIC_API_KEY` nunca llega a usarse en ese modo.
-- `STT_URL` (por ejemplo `http://stt:8000`)
-- `DATABASE_URL` (por ejemplo `postgres://usuario:clave@db:5432/reuniones`)
-- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
+- `STT_URL=http://127.0.0.1:8000` (`scripts/start.sh` arranca `stt` en el puerto de esta URL)
+- `WHISPER_MODEL=small`, `WHISPER_LANGUAGE=es`
+- `DATABASE_PATH=./data/reuniones.db` (relativa a la raíz del proyecto, desde donde `scripts/start.sh` arranca `api`)
+- `API_PORT=3000`
 - `MODEL_FAST=claude-haiku-5-5`
 - `MODEL_MAIN=claude-sonnet-5-5`
 
 Notas sobre la base de datos:
-- Migraciones versionadas con Drizzle (`drizzle-kit`), que se aplican al arrancar `api` o con un comando explícito.
-- Healthcheck en `db` y `depends_on` con `condition: service_healthy` para que `api` espere a que Postgres esté listo.
-- No exponer el puerto 5432 al exterior salvo que haga falta para depurar, y en ese caso solo a `127.0.0.1`.
-- Todos los puertos publicados (`web` 8080, `api` 3000, `stt` 8000) van solo a `127.0.0.1`. Orden de arranque por healthchecks: `db` y `stt` → `api` → `web`.
+- Migraciones versionadas con Drizzle (`drizzle-kit`, dialecto `sqlite`), que se aplican al arrancar `api`.
+- SQLite no tiene tipos uuid, fecha ni JSON: los ids son UUID guardados como texto (`crypto.randomUUID()`), las fechas se guardan en milisegundos (`timestamp_ms`) y los campos JSON como texto (`text({ mode: 'json' })`).
+- Las claves foráneas (y el borrado en cascada) solo funcionan con `PRAGMA foreign_keys = ON`, que se activa al abrir la conexión junto con `journal_mode = WAL`.
+- `better-sqlite3` está fijado a la serie 12: la 13.0.3 provoca un segmentation fault al abrir la base de datos en este Mac (Intel, Node 22.13).
+- Todo lo local (base de datos y modelo de Whisper en `data/models`) vive en `data/`, que está en `.gitignore`.
+- `api` y `stt` escuchan solo en `127.0.0.1`, y Vite solo en `localhost`.
 
 ## Arquitectura hexagonal (obligatoria en todos los servicios)
 
@@ -81,7 +83,7 @@ infrastructure  →  application  →  domain
 | `application/use-cases/` | Implementaciones de los puertos de entrada: lo que se puede pedir desde fuera. Reciben sus dependencias por constructor. | `domain/`, `application/ports/`, `application/services/` y librerías puras sin E/S (como `zod`) |
 | `application/services/` | Lógica de aplicación que usan varios casos de uso (por ejemplo `MeetingSummarizer` y `DiagramGenerator`). Hablan con el exterior solo a través de puertos de salida. | `domain/`, `application/ports/out/` y librerías puras sin E/S |
 | `infrastructure/in/` | Adaptadores de entrada (driving): rutas HTTP, CLI... Traducen la petición y llaman a un puerto de entrada. | Todo lo anterior + librerías |
-| `infrastructure/out/` | Adaptadores de salida (driven): Postgres, Whisper, Claude... Implementan un puerto de salida. | Todo lo anterior + librerías |
+| `infrastructure/out/` | Adaptadores de salida (driven): SQLite, Whisper, Claude... Implementan un puerto de salida. | Todo lo anterior + librerías |
 | `config/` | Lectura y validación de variables de entorno. | Librerías de validación |
 | `main.ts` | Raíz de composición: crea los adaptadores, los inyecta en los casos de uso y arranca el servidor. Es el único sitio que conoce todas las piezas. | Todo |
 
@@ -101,18 +103,19 @@ Convenciones:
 ## Modelo de datos inicial (propuesta)
 
 - `meetings`: id (uuid), título, fecha de creación, duración en segundos, idioma, estado (`transcribiendo`, `resumiendo`, `listo`, `error`).
-- `transcripts`: id, meeting_id, texto completo, segmentos con timestamps (JSONB).
-- `summaries`: id, meeting_id, resumen, decisiones (JSONB), tareas (JSONB con `descripcion` y `responsable`), temas (JSONB), modelo usado.
+- `transcripts`: id, meeting_id, texto completo, segmentos con timestamps (JSON).
+- `summaries`: id, meeting_id, resumen, decisiones (JSON), tareas (JSON con `descripcion` y `responsable`), temas (JSON), modelo usado.
 - `diagrams`: id, meeting_id, tipo (`mindmap`, `flowchart`, `timeline`), código Mermaid.
 
 Borrar una reunión debe borrar en cascada todo lo asociado. Ofrecer en la interfaz un botón de "eliminar reunión".
 
 ## Excepción: la transcripción NO la hace Claude
 
-Claude trabaja con texto e imágenes, **no transcribe audio**. Por eso hace falta un componente de voz a texto aparte. Para respetar "solo Claude para la IA generativa" y mantenerlo todo local, se usa **Whisper en local dentro de Docker**: no depende de ninguna API de terceros y el audio no sale del ordenador. Es el único componente de IA que no es de Claude, y solo convierte audio en texto.
+Claude trabaja con texto e imágenes, **no transcribe audio**. Por eso hace falta un componente de voz a texto aparte. Para respetar "solo Claude para la IA generativa" y mantenerlo todo local, se usa **Whisper en local** (servicio `stt` en Python): no depende de ninguna API de terceros y el audio no sale del ordenador. Es el único componente de IA que no es de Claude, y solo convierte audio en texto.
 
 - Modelo inicial: `small` o `medium` de Whisper para español; probar `large-v3` si el equipo lo aguanta.
-- Sin GPU funciona, pero es más lento; con GPU NVIDIA hay que configurar el runtime de GPU en Docker.
+- Corre en la CPU (`WHISPER_DEVICE=cpu`, `int8`), que es lo que hay en el Mac Intel de Sergio. Con GPU NVIDIA se podría usar `cuda`.
+- El modelo se descarga de Hugging Face la primera vez a `data/models` (`HF_HOME`, lo fija `scripts/start.sh`).
 - Diarización (quién habla): queda fuera del MVP. Si hace falta, valorar `pyannote` más adelante.
 
 ## Captura de audio en web (limitaciones reales)
@@ -146,7 +149,7 @@ Consideraciones del modo `subscription`:
 - Claude Code es un agente completo. Para usarlo como simple generador de texto hay que **desactivar las herramientas y limitar a un turno** (comprobar las opciones exactas en la documentación del SDK). Así no lee archivos ni ejecuta nada.
 - Es más lento que una llamada directa a la API. Aceptable para este caso, porque el resumen se genera tras la reunión.
 - El plan Pro tiene límites por sesión que se comparten con el chat y con Claude Code. Para no gastarlos de más: Haiku en los trozos, Sonnet solo en el resultado final, y mostrar un error claro si se alcanza el límite, sin reintentos en bucle.
-- Autenticar el contenedor con la cuenta es más incómodo que poner una clave. Documentar en el `README` el paso a paso que se acabe usando.
+- Autenticación: `CLAUDE_CODE_OAUTH_TOKEN` en `.env` (en una sola línea) o, si está vacío, el inicio de sesión de Claude Code del propio ordenador. El paso a paso está en el `README`.
 - La suscripción Pro es de uso individual. No compartir este acceso con otras personas ni usarlo para dar servicio a terceros; para eso, modo `api`.
 - Revisar la ayuda oficial antes de decidir, porque las condiciones han cambiado varias veces: `https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan`
 
@@ -184,12 +187,10 @@ Costes y límites exactos: consultar `https://docs.claude.com` antes de fijar pr
 
 Grabar a otras personas en España y la UE exige informarlas y obtener su consentimiento (RGPD). La app debe mostrar un aviso claro al iniciar la grabación. Todo corre en local y el audio no se guarda, pero la transcripción sí se almacena en la base de datos y se envía a la API de Anthropic para generar el resumen. Hay que tenerlo en cuenta con reuniones confidenciales, y por eso conviene poder eliminar reuniones con facilidad.
 
-## Primeros pasos sugeridos para Claude Code
+## Arrancar y comprobar (para Claude Code)
 
-1. Crear la estructura del repo con `web/`, `api/`, `docker-compose.yml`, `.env.example` y `.gitignore` (con `.env`). Levantar primero `db` con Postgres y volumen, y comprobar la conexión desde `api`.
-2. `web`: proyecto Vite + React + TypeScript + Tailwind con botón de grabar (`getDisplayMedia` + micrófono mezclados), comprobación de pista de audio y descarga del audio para verificar que suena bien. Probar con pestaña y con pantalla completa en Windows.
-3. `stt`: contenedor con Whisper local y un endpoint HTTP que reciba audio y devuelva texto; comprobar con una grabación corta en español.
-4. `api`: módulo `claude-client.ts` con los dos proveedores (`subscription` y `api`), endpoint `/summarize` que llama a Claude (Haiku para trozos, Sonnet para final) y devuelve JSON validado, y endpoint `/diagram` que devuelve Mermaid. Empezar probando el modo `subscription` con un texto corto.
-5. `api` + `db`: tablas y migraciones con Drizzle, y guardado de transcripción, resumen y diagrama al terminar cada reunión.
-6. `web`: pantalla de resultado con transcripción, resumen y diagrama renderizado, listado del historial de reuniones, botón de eliminar y botones de descarga (Markdown, JSON, SVG/PNG).
-7. Dockerizar los cuatro servicios y comprobar que `docker compose up` lo levanta todo y que los datos persisten tras reiniciar.
+- Primera vez o tras cambiar dependencias: `scripts/setup.sh` (npm en `api` y `web`, `stt/.venv` con `pip`, y `.env` desde `.env.example`).
+- Arrancar todo: `scripts/start.sh`, o la configuración `app` de `.claude/launch.json` para verla en el navegador integrado. Compila `api` en cada arranque.
+- Comprobar tipos: `npm run typecheck --prefix api` y `npm run typecheck --prefix web`.
+- Cambios de esquema: editar `api/src/infrastructure/out/sqlite/schema.ts` y ejecutar `npm run db:generate --prefix api`.
+- Docker Desktop puede seguir reteniendo los puertos 3000 y 8000 de la versión anterior aunque su motor no responda; si `api` o `stt` fallan con `EADDRINUSE`, hay que cerrar Docker Desktop.
