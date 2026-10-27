@@ -1,41 +1,50 @@
 {
-  "id": "31bd9e1f-2fd5-43d8-901a-befd533ad4eb",
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "356ed11a-fe96-44f9-aeda-45a25c188c66",
   "prevId": "00000000-0000-0000-0000-000000000000",
-  "version": "7",
-  "dialect": "postgresql",
   "tables": {
-    "public.diagrams": {
+    "diagrams": {
       "name": "diagrams",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": true,
           "notNull": true,
-          "default": "gen_random_uuid()"
+          "autoincrement": false
         },
         "meeting_id": {
           "name": "meeting_id",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "type": {
           "name": "type",
-          "type": "diagram_type",
-          "typeSchema": "public",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "mermaid_code": {
           "name": "mermaid_code",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "diagrams_meeting_id_unique": {
+          "name": "diagrams_meeting_id_unique",
+          "columns": [
+            "meeting_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "diagrams_meeting_id_meetings_id_fk": {
           "name": "diagrams_meeting_id_meetings_id_fk",
@@ -52,122 +61,132 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "diagrams_meeting_id_unique": {
-          "name": "diagrams_meeting_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "meeting_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
-    "public.meetings": {
+    "meetings": {
       "name": "meetings",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": true,
           "notNull": true,
-          "default": "gen_random_uuid()"
+          "autoincrement": false
         },
         "title": {
           "name": "title",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp with time zone",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "default": "now()"
+          "autoincrement": false
         },
         "duration_seconds": {
           "name": "duration_seconds",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         },
         "language": {
           "name": "language",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false,
           "default": "'es'"
         },
         "status": {
           "name": "status",
-          "type": "meeting_status",
-          "typeSchema": "public",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false,
           "default": "'transcribiendo'"
+        },
+        "error_message": {
+          "name": "error_message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "checkConstraints": {}
     },
-    "public.summaries": {
+    "summaries": {
       "name": "summaries",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": true,
           "notNull": true,
-          "default": "gen_random_uuid()"
+          "autoincrement": false
         },
         "meeting_id": {
           "name": "meeting_id",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "resumen": {
           "name": "resumen",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "decisiones": {
           "name": "decisiones",
-          "type": "jsonb",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "tareas": {
           "name": "tareas",
-          "type": "jsonb",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "temas": {
           "name": "temas",
-          "type": "jsonb",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "model": {
           "name": "model",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "summaries_meeting_id_unique": {
+          "name": "summaries_meeting_id_unique",
+          "columns": [
+            "meeting_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "summaries_meeting_id_meetings_id_fk": {
           "name": "summaries_meeting_id_meetings_id_fk",
@@ -184,50 +203,50 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "summaries_meeting_id_unique": {
-          "name": "summaries_meeting_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "meeting_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
-    "public.transcripts": {
+    "transcripts": {
       "name": "transcripts",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": true,
           "notNull": true,
-          "default": "gen_random_uuid()"
+          "autoincrement": false
         },
         "meeting_id": {
           "name": "meeting_id",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "text": {
           "name": "text",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "segments": {
           "name": "segments",
-          "type": "jsonb",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "transcripts_meeting_id_unique": {
+          "name": "transcripts_meeting_id_unique",
+          "columns": [
+            "meeting_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "transcripts_meeting_id_meetings_id_fk": {
           "name": "transcripts_meeting_id_meetings_id_fk",
@@ -244,49 +263,18 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "transcripts_meeting_id_unique": {
-          "name": "transcripts_meeting_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "meeting_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     }
   },
-  "enums": {
-    "public.diagram_type": {
-      "name": "diagram_type",
-      "schema": "public",
-      "values": [
-        "mindmap",
-        "flowchart",
-        "timeline"
-      ]
-    },
-    "public.meeting_status": {
-      "name": "meeting_status",
-      "schema": "public",
-      "values": [
-        "transcribiendo",
-        "resumiendo",
-        "listo",
-        "error"
-      ]
-    }
-  },
-  "schemas": {},
-  "sequences": {},
-  "roles": {},
-  "policies": {},
   "views": {},
+  "enums": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
   }
 }

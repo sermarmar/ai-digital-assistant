@@ -15,19 +15,19 @@ import { buildHttpServer } from './infrastructure/in/http/server.js';
 import { ApiTextGenerator } from './infrastructure/out/claude/api-text-generator.js';
 import { SubscriptionTextGenerator } from './infrastructure/out/claude/subscription-text-generator.js';
 import { ConsoleLogger } from './infrastructure/out/logging/console-logger.js';
-import { createDatabase } from './infrastructure/out/postgres/database.js';
-import { runMigrations } from './infrastructure/out/postgres/migrate.js';
-import { PostgresDatabaseProbe } from './infrastructure/out/postgres/postgres-database-probe.js';
-import { PostgresMeetingRepository } from './infrastructure/out/postgres/postgres-meeting-repository.js';
+import { createDatabase } from './infrastructure/out/sqlite/database.js';
+import { runMigrations } from './infrastructure/out/sqlite/migrate.js';
+import { SqliteDatabaseProbe } from './infrastructure/out/sqlite/sqlite-database-probe.js';
+import { SqliteMeetingRepository } from './infrastructure/out/sqlite/sqlite-meeting-repository.js';
 import { SttTranscriber } from './infrastructure/out/stt/stt-transcriber.js';
 
 const env = loadEnv();
 
 // 1. Adaptadores de salida
-const database = createDatabase(env.DATABASE_URL);
-await runMigrations(database.db);
-const meetingRepository = new PostgresMeetingRepository(database.db);
-const databaseProbe = new PostgresDatabaseProbe(database.db);
+const database = createDatabase(env.DATABASE_PATH);
+runMigrations(database.db);
+const meetingRepository = new SqliteMeetingRepository(database.db);
+const databaseProbe = new SqliteDatabaseProbe(database.db);
 const transcriber = new SttTranscriber(env.STT_URL);
 const textGenerator = createTextGenerator(env);
 const logger = new ConsoleLogger();
@@ -53,7 +53,8 @@ const interrupted = await new FailInterruptedMeetings(meetingRepository).execute
 if (interrupted > 0) server.log.warn(`${interrupted} reunión(es) a medio procesar marcadas como error`);
 server.log.info(`Proveedor de Claude: ${env.CLAUDE_PROVIDER}`);
 
-await server.listen({ host: '0.0.0.0', port: env.API_PORT });
+// Solo desde este ordenador: la web llega a través del proxy de Vite
+await server.listen({ host: '127.0.0.1', port: env.API_PORT });
 
 function createTextGenerator({ CLAUDE_PROVIDER, ANTHROPIC_API_KEY }: Env): TextGenerator {
   if (CLAUDE_PROVIDER === 'subscription') return new SubscriptionTextGenerator();
@@ -63,7 +64,7 @@ function createTextGenerator({ CLAUDE_PROVIDER, ANTHROPIC_API_KEY }: Env): TextG
 
 async function shutdown(): Promise<void> {
   await server.close();
-  await database.close();
+  database.close();
   process.exit(0);
 }
 process.on('SIGTERM', shutdown);

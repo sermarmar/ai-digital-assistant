@@ -12,12 +12,12 @@ import { diagrams, meetings, summaries, transcripts } from './schema.js';
 
 type MeetingRow = typeof meetings.$inferSelect;
 
-export class PostgresMeetingRepository implements MeetingRepository {
+export class SqliteMeetingRepository implements MeetingRepository {
   constructor(private readonly db: Database) {}
 
   async create(title: string): Promise<Meeting> {
     const [row] = await this.db.insert(meetings).values({ title }).returning();
-    if (!row) throw new Error('Postgres no ha devuelto la reunión creada');
+    if (!row) throw new Error('SQLite no ha devuelto la reunión creada');
     return toMeeting(row);
   }
 
