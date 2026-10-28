@@ -10,11 +10,13 @@ import type { ListMeetingsUseCase } from '../../../application/ports/in/list-mee
 import type { ProcessMeetingUseCase } from '../../../application/ports/in/process-meeting.js';
 import type { UpdateDiagramUseCase } from '../../../application/ports/in/update-diagram.js';
 import { TextGenerationError, UsageLimitError } from '../../../application/ports/out/text-generator.js';
-import { MeetingNotFoundError } from '../../../domain/errors.js';
+import { EmptyAudioError, MeetingNotFoundError } from '../../../domain/errors.js';
 import { registerHealthRoutes } from './health-routes.js';
 import { registerMeetingRoutes } from './meeting-routes.js';
 
-const MAX_AUDIO_BYTES = 500 * 1024 * 1024;
+// Da para vídeos de reuniones largas. La web comprueba el mismo límite antes de subir (upload-meeting.ts)
+const MAX_AUDIO_GB = 4;
+const MAX_AUDIO_BYTES = MAX_AUDIO_GB * 1024 ** 3;
 
 export interface HttpUseCases {
   checkHealth: CheckHealthUseCase;
@@ -37,6 +39,12 @@ export function buildHttpServer(useCases: HttpUseCases): FastifyInstance {
     }
     if (error instanceof ZodError) {
       return reply.status(400).send({ error: 'Petición no válida', detalles: error.issues });
+    }
+    if (error instanceof EmptyAudioError) {
+      return reply.status(400).send({ error: error.message });
+    }
+    if (error instanceof app.multipartErrors.RequestFileTooLargeError) {
+      return reply.status(413).send({ error: `El archivo pesa más de ${MAX_AUDIO_GB} GB, que es el máximo.` });
     }
     if (error instanceof UsageLimitError) {
       return reply.status(429).send({ error: error.message });

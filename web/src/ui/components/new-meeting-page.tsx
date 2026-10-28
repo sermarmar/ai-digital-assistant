@@ -32,7 +32,7 @@ export function NewMeetingPage({ onMeetingsChanged, onRecordingChange }: NewMeet
       {!supported && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           Este navegador no permite grabar el audio que se comparte. Usa <strong>Chrome</strong> o <strong>Edge</strong>{' '}
-          de escritorio. Mientras tanto puedes subir un archivo de audio.
+          de escritorio. Mientras tanto puedes subir un archivo de audio o vídeo.
         </div>
       )}
 
@@ -80,7 +80,7 @@ export function NewMeetingPage({ onMeetingsChanged, onRecordingChange }: NewMeet
       )}
 
       <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <h3 className="font-medium text-slate-900">O sube un archivo de audio</h3>
+        <h3 className="font-medium text-slate-900">O sube un archivo de audio o vídeo</h3>
         <FileUploadForm enabled={consent} onUploaded={handleUploaded} />
       </section>
     </div>

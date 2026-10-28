@@ -5,7 +5,7 @@ Graba desde el navegador el audio de una videollamada (o de cualquier pestaña),
 - un resumen con decisiones, tareas (con responsable) y temas,
 - un esquema en forma de mapa mental, que puedes editar y descargar.
 
-Todo corre en local, sin Docker. El audio no sale de tu ordenador ni se guarda. La transcripción sí se guarda en una base de datos SQLite local (`data/reuniones.db`) y se envía a Claude para generar el resumen.
+Todo corre en local, sin Docker. El audio no sale de tu ordenador y se borra en cuanto se transcribe. La transcripción sí se guarda en una base de datos SQLite local (`data/reuniones.db`) y se envía a Claude para generar el resumen.
 
 ## Requisitos
 
@@ -131,9 +131,11 @@ Para parar, pulsa `Ctrl+C` en cada terminal. Estos comandos usan los puertos por
 5. Pulsa **Detener** al acabar. También se para sola si dejas de compartir desde la barra del navegador. Antes de procesar puedes escuchar la grabación, descargarla o descartarla.
 6. Pulsa **Procesar reunión**.
 
-### Subir un archivo de audio
+### Subir un archivo de audio o vídeo
 
-En la misma pantalla puedes subir un audio que ya tengas (webm, mp3, wav, m4a…).
+En la misma pantalla puedes subir un audio (webm, mp3, wav, m4a…) o un vídeo (mp4, mov, webm, mkv…) que ya tengas, de hasta 4 GB. Del vídeo solo se usa el audio.
+
+Mientras se transcribe, `api` guarda el archivo en `data/uploads` y `stt` hace otra copia temporal, así que necesitas en el disco algo más del doble de lo que pesa. Las dos se borran al terminar la transcripción.
 
 ### El resultado
 
@@ -174,6 +176,7 @@ Algunas notas:
 | `WHISPER_MODEL` | `small`, `medium` o `large-v3`: más grande es más preciso y más lento | `small` |
 | `WHISPER_LANGUAGE` | Idioma del audio; si se deja vacío, se detecta solo | `es` |
 | `DATABASE_PATH` | Archivo de SQLite, relativo a la carpeta del proyecto | `./data/reuniones.db` |
+| `UPLOADS_DIR` | Carpeta donde espera el archivo subido mientras se transcribe | `./data/uploads` |
 | `API_PORT` | Puerto de `api` | `3000` |
 
 `stt` y `api` solo escuchan en `127.0.0.1`, y Vite solo en `localhost`: no se puede acceder desde otros equipos de la red.
@@ -225,8 +228,8 @@ npm run db:generate --prefix api
 
 ## Datos y privacidad
 
-- Todo se guarda en la carpeta `data/`: la base de datos (`reuniones.db`) y el modelo de Whisper (`models/`).
-- **El audio no se guarda**: se descarta después de transcribirlo.
+- Todo se guarda en la carpeta `data/`: la base de datos (`reuniones.db`), el modelo de Whisper (`models/`) y, solo mientras se transcribe, el archivo subido (`uploads/`).
+- **El audio no se guarda**: se borra en cuanto se transcribe. Si `api` se para a medias, se borra al volver a arrancar.
 - La **transcripción se envía a Anthropic** para generar el resumen. Tenlo en cuenta con reuniones confidenciales y elimina las que no necesites.
 - En España y la UE (RGPD) tienes que informar a las personas que grabas y obtener su consentimiento.
 - Para **borrar todas las reuniones** de forma irreversible, para la app y borra la base de datos (en el siguiente arranque se crea vacía):
@@ -237,9 +240,11 @@ npm run db:generate --prefix api
 
 ## Problemas frecuentes
 
+**«El archivo no tiene pista de audio»**: el vídeo que has subido no tiene sonido (por ejemplo, una grabación de pantalla sin audio).
+
 **«No se ha compartido audio»**: elegiste una ventana o no marcaste la opción de compartir el audio. Vuelve a grabar eligiendo una pestaña y marcando *Compartir también el audio de la pestaña*.
 
-**No aparece la sección «Grabar»**: el navegador no es compatible. Usa Chrome o Edge de escritorio, o sube un archivo de audio.
+**No aparece la sección «Grabar»**: el navegador no es compatible. Usa Chrome o Edge de escritorio, o sube un archivo de audio o vídeo.
 
 **En macOS no se oye a los demás**: macOS no deja compartir el audio del sistema desde el navegador. Graba la **pestaña** de la videollamada (Meet, Teams web, Zoom web) en lugar de la aplicación de escritorio.
 

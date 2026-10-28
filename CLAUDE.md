@@ -23,6 +23,7 @@ Es, en esencia, un asistente de reunión con IA.
 - Ejecución: **en local, sin Docker** (`scripts/setup.sh` la primera vez y `scripts/start.sh` para arrancar). Docker Desktop daba problemas en el Mac de Sergio (Intel, disco casi lleno).
 - Base de datos: **SQLite**, un archivo local (`data/reuniones.db`, configurable con `DATABASE_PATH`) a través de `better-sqlite3` y Drizzle. **No se usa Supabase ni Postgres.** El backend propio (`api`) es el único que habla con la base de datos; el navegador nunca accede directamente.
 - Qué se guarda: transcripción, resumen, decisiones, tareas, temas y diagrama Mermaid. **El audio no se guarda por defecto** (se descarta tras transcribir); si más adelante se quiere conservar, se guardaría como archivo dentro de `data/`, nunca dentro de la base de datos.
+- Subida de audio o vídeo (hasta 4 GB): `api` la escribe según llega en `data/uploads` (puerto `AudioStore`, adaptador `FileAudioStore`), se la manda a `stt` en streaming y la borra al terminar la transcripción; al arrancar borra los restos. `stt` pasa a Whisper el archivo temporal de la subida, sin leerlo en memoria.
 - Sin cuentas de usuario por ahora (uso personal en local).
 - El resultado también se puede descargar (Markdown, JSON, SVG/PNG del diagrama).
 - IA generativa: **solo Claude**. Sergio tiene el **plan Pro**, así que el modo por defecto es usar su suscripción mediante el Agent SDK (sin coste por token), con la API de Anthropic (de pago por token) como alternativa intercambiable. Ver la sección "Proveedor de Claude".
@@ -51,6 +52,7 @@ Variables de entorno (`.env`, no versionado; incluir un `.env.example`):
 - `STT_URL=http://127.0.0.1:8000` (`scripts/start.sh` arranca `stt` en el puerto de esta URL)
 - `WHISPER_MODEL=small`, `WHISPER_LANGUAGE=es`
 - `DATABASE_PATH=./data/reuniones.db` (relativa a la raíz del proyecto, desde donde `scripts/start.sh` arranca `api`)
+- `UPLOADS_DIR=./data/uploads` (archivo subido mientras se transcribe)
 - `API_PORT=3000`
 - `MODEL_FAST=claude-haiku-5-5`
 - `MODEL_MAIN=claude-sonnet-5-5`

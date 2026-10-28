@@ -4,7 +4,7 @@ from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse
 
 from app.application.ports.inbound.transcribe_audio import TranscribeAudioUseCase
-from app.domain.errors import EmptyAudioError, UnreadableAudioError
+from app.domain.errors import EmptyAudioError, NoAudioTrackError, UnreadableAudioError
 from app.domain.transcript import Transcript
 
 
@@ -16,6 +16,7 @@ def create_http_app(transcribe_audio: TranscribeAudioUseCase, model_name: str) -
 
     app.add_exception_handler(EmptyAudioError, bad_audio)
     app.add_exception_handler(UnreadableAudioError, bad_audio)
+    app.add_exception_handler(NoAudioTrackError, bad_audio)
 
     @app.get("/health")
     def health() -> dict:
@@ -28,7 +29,8 @@ def create_http_app(transcribe_audio: TranscribeAudioUseCase, model_name: str) -
         audio: Annotated[UploadFile, File()],
         language: Annotated[str | None, Form()] = None,
     ) -> dict:
-        transcript = transcribe_audio.execute(audio.file.read(), language)
+        # audio.file es un archivo temporal en disco: no se lee entero en memoria, que un vídeo puede pesar varios GB
+        transcript = transcribe_audio.execute(audio.file, language)
         return _to_json(transcript)
 
     return app

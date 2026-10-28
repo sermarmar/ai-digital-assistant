@@ -25,7 +25,8 @@ export class SttTranscriber implements Transcriber {
 
   async transcribe(audio: AudioFile): Promise<TranscriptionResult> {
     const form = new FormData();
-    form.append('audio', new Blob([audio.content], { type: audio.mimeType }), audio.filename);
+    // content se lee del disco según se envía, sin cargar el archivo en memoria
+    form.append('audio', audio.content, audio.filename);
 
     let response;
     try {
@@ -33,6 +34,10 @@ export class SttTranscriber implements Transcriber {
         method: 'POST',
         body: form,
         dispatcher: this.dispatcher,
+        // Sin esto, fetch duplica el cuerpo por si tiene que repetirlo en una redirección, y esa
+        // copia, que nadie lee, acaba guardando en memoria el archivo entero
+        redirect: 'error',
+        window: null,
       });
     } catch (error) {
       throw new TranscriptionError('No se ha podido conectar con el servicio de transcripción.', { cause: error });

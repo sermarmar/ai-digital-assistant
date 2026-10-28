@@ -3,6 +3,8 @@ import { z } from 'zod';
 const envSchema = z.object({
   // Archivo de SQLite; una ruta relativa parte de la carpeta desde la que se arranca la API
   DATABASE_PATH: z.string().min(1).default('./data/reuniones.db'),
+  // Carpeta donde espera el archivo subido mientras se transcribe
+  UPLOADS_DIR: z.string().min(1).default('./data/uploads'),
   API_PORT: z.coerce.number().int().positive().default(3000),
   STT_URL: z.url(),
   CLAUDE_PROVIDER: z.enum(['subscription', 'api']).default('subscription'),

@@ -14,6 +14,7 @@ import { loadEnv, type Env } from './config/env.js';
 import { buildHttpServer } from './infrastructure/in/http/server.js';
 import { ApiTextGenerator } from './infrastructure/out/claude/api-text-generator.js';
 import { SubscriptionTextGenerator } from './infrastructure/out/claude/subscription-text-generator.js';
+import { FileAudioStore } from './infrastructure/out/filesystem/file-audio-store.js';
 import { ConsoleLogger } from './infrastructure/out/logging/console-logger.js';
 import { createDatabase } from './infrastructure/out/sqlite/database.js';
 import { runMigrations } from './infrastructure/out/sqlite/migrate.js';
@@ -28,6 +29,7 @@ const database = createDatabase(env.DATABASE_PATH);
 runMigrations(database.db);
 const meetingRepository = new SqliteMeetingRepository(database.db);
 const databaseProbe = new SqliteDatabaseProbe(database.db);
+const audioStore = new FileAudioStore(env.UPLOADS_DIR);
 const transcriber = new SttTranscriber(env.STT_URL);
 const textGenerator = createTextGenerator(env);
 const logger = new ConsoleLogger();
@@ -41,7 +43,7 @@ const useCases = {
   listMeetings: new ListMeetings(meetingRepository),
   getMeeting: new GetMeeting(meetingRepository),
   deleteMeeting: new DeleteMeeting(meetingRepository),
-  processMeeting: new ProcessMeeting(meetingRepository, transcriber, summarizer, diagramGenerator, logger),
+  processMeeting: new ProcessMeeting(meetingRepository, audioStore, transcriber, summarizer, diagramGenerator, logger),
   fixDiagram: new FixDiagram(meetingRepository, diagramGenerator),
   updateDiagram: new UpdateDiagram(meetingRepository),
 };
@@ -49,7 +51,7 @@ const useCases = {
 // 3. Adaptador de entrada
 const server = buildHttpServer(useCases);
 
-const interrupted = await new FailInterruptedMeetings(meetingRepository).execute();
+const interrupted = await new FailInterruptedMeetings(meetingRepository, audioStore).execute();
 if (interrupted > 0) server.log.warn(`${interrupted} reunión(es) a medio procesar marcadas como error`);
 server.log.info(`Proveedor de Claude: ${env.CLAUDE_PROVIDER}`);
 

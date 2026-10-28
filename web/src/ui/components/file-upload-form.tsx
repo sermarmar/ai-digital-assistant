@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { MAX_UPLOAD_GB } from '../../application/use-cases/upload-meeting';
 import type { Meeting } from '../../domain/meeting';
 import { errorMessage } from '../errors';
 import { useServices } from '../services';
@@ -34,10 +35,14 @@ export function FileUploadForm({ enabled, onUploaded }: FileUploadFormProps) {
     <form onSubmit={(event) => void submit(event)} className="mt-4 space-y-3">
       <input
         type="file"
-        accept="audio/*,video/webm,video/mp4"
+        accept="audio/*,video/*"
         onChange={(event) => setFile(event.target.files?.[0] ?? null)}
         className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-slate-200"
       />
+      <p className="text-xs text-slate-500">
+        Audio (mp3, m4a, wav, webm…) o vídeo (mp4, mov, webm, mkv…) de hasta {MAX_UPLOAD_GB} GB. Del vídeo solo se usa
+        el audio.
+      </p>
       <input
         type="text"
         placeholder="Título (opcional)"
