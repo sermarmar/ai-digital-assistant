@@ -17,7 +17,17 @@ Todo corre en local, sin Docker. El audio no sale de tu ordenador ni se guarda. 
   - Una clave de API de Anthropic, que se paga por token.
 - Unos **2 GB de disco**: dependencias de Node y Python, y medio GB del modelo de Whisper.
 
-## Puesta en marcha (primera vez)
+## Arrancar en local
+
+Todo se ejecuta desde la carpeta del proyecto, en tu ordenador. No hace falta Docker.
+
+| Cuándo | Qué hacer |
+|---|---|
+| Solo la primera vez (y cuando cambien las dependencias) | `scripts/setup.sh` y poner el token de Claude en `.env` |
+| Cada vez que quieras usar la app | `scripts/start.sh` y abrir http://localhost:5173 |
+| Para pararla | `Ctrl+C` en la terminal de `scripts/start.sh` |
+
+### 1. Instalar (solo la primera vez)
 
 1. Instala las dependencias y crea tu `.env`:
 
@@ -45,17 +55,61 @@ Todo corre en local, sin Docker. El audio no sale de tu ordenador ni se guarda. 
 
    Deja `ANTHROPIC_API_KEY` vacía.
 
-4. Arranca la app:
+### 2. Arrancar
 
-   ```bash
-   scripts/start.sh
-   ```
+Desde la carpeta del proyecto:
 
-   Arranca los tres procesos (`stt`, `api` y `web`) en la misma terminal. La primera vez `stt` descarga el modelo de Whisper a `data/models` y tarda unos minutos en estar listo.
+```bash
+scripts/start.sh
+```
 
-5. Abre en Chrome o Edge la dirección que muestra Vite, normalmente **http://localhost:5173**.
+Arranca en esa misma terminal las tres partes de la app:
 
-Para parar, pulsa `Ctrl+C` en la terminal donde ejecutaste `scripts/start.sh`. Las reuniones se conservan entre arranques.
+| Parte | Qué hace | Dirección |
+|---|---|---|
+| `stt` | Transcribe el audio con Whisper | http://127.0.0.1:8000 |
+| `api` | Coordina Whisper y Claude, y guarda las reuniones | http://127.0.0.1:3000 |
+| `web` | La página que usas en el navegador | http://localhost:5173 |
+
+La primera vez `stt` descarga el modelo de Whisper a `data/models` y tarda unos minutos. Está listo cuando la terminal muestra `Uvicorn running on http://127.0.0.1:8000`.
+
+Abre en Chrome o Edge la dirección que aparece junto a `Local:`, normalmente **http://localhost:5173**. Si ese puerto está ocupado, Vite usa el siguiente libre (5174, 5175…).
+
+### 3. Parar
+
+Pulsa `Ctrl+C` en la terminal de `scripts/start.sh`: se paran las tres partes. Las reuniones están guardadas en `data/reuniones.db` y siguen ahí la próxima vez.
+
+### Arrancar cada parte por separado (opcional)
+
+`scripts/start.sh` hace exactamente esto por ti. Arrancarlas a mano sirve para ver los mensajes de cada parte por separado o reiniciar solo una. Abre tres terminales en la carpeta del proyecto, en este orden:
+
+**Terminal 1, `stt`.** El primer comando carga la configuración de `.env` (modelo e idioma de Whisper):
+
+```bash
+set -a; source .env; set +a
+```
+
+```bash
+HF_HOME="$PWD/data/models" stt/.venv/bin/uvicorn app.main:app --app-dir stt --host 127.0.0.1 --port 8000
+```
+
+**Terminal 2, `api`.** Primero se compila y después se arranca:
+
+```bash
+npm run build --prefix api
+```
+
+```bash
+node --env-file=.env api/dist/main.js
+```
+
+**Terminal 3, `web`:**
+
+```bash
+npm run dev --prefix web
+```
+
+Para parar, pulsa `Ctrl+C` en cada terminal. Estos comandos usan los puertos por defecto (8000 y 3000); si los has cambiado en `.env`, usa `scripts/start.sh`.
 
 ## Uso
 
@@ -149,7 +203,7 @@ Las reglas detalladas están en [CLAUDE.md](CLAUDE.md).
 
 ## Desarrollo
 
-`scripts/start.sh` ya arranca la web con recarga en caliente: los cambios en `web/` se ven al momento. Si cambias `api/` o `stt/`, para con `Ctrl+C` y vuelve a ejecutar `scripts/start.sh` (compila `api` cada vez que arranca).
+`scripts/start.sh` ya arranca la web con recarga en caliente: los cambios en `web/` se ven al momento. Si cambias `api/` o `stt/`, para con `Ctrl+C` y vuelve a ejecutar `scripts/start.sh` (compila `api` cada vez que arranca). Si las tienes arrancadas por separado, basta con reiniciar la parte que hayas cambiado.
 
 **Comprobar tipos:**
 
