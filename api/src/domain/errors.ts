@@ -5,6 +5,13 @@ export class MeetingNotFoundError extends Error {
   }
 }
 
+export class MeetingNotResumableError extends Error {
+  constructor() {
+    super('Esta reunión no se puede continuar: ya está terminada, se está procesando o no tiene transcripción.');
+    this.name = 'MeetingNotResumableError';
+  }
+}
+
 export class EmptyAudioError extends Error {
   constructor() {
     super('El archivo de audio está vacío.');

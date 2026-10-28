@@ -5,6 +5,7 @@ import type { GetMeeting } from '../application/use-cases/get-meeting';
 import type { ListMeetings } from '../application/use-cases/list-meetings';
 import type { PrepareDiagram } from '../application/use-cases/prepare-diagram';
 import type { RenderDiagram } from '../application/use-cases/render-diagram';
+import type { ResumeMeeting } from '../application/use-cases/resume-meeting';
 import type { SaveDiagram } from '../application/use-cases/save-diagram';
 import type { StartRecording } from '../application/use-cases/start-recording';
 import type { UploadMeeting } from '../application/use-cases/upload-meeting';
@@ -16,6 +17,7 @@ export interface AppServices {
   getMeeting: GetMeeting;
   deleteMeeting: DeleteMeeting;
   uploadMeeting: UploadMeeting;
+  resumeMeeting: ResumeMeeting;
   startRecording: StartRecording;
   prepareDiagram: PrepareDiagram;
   renderDiagram: RenderDiagram;

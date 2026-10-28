@@ -1,6 +1,7 @@
 // Raíz de composición: el único sitio que conoce todas las piezas y las conecta.
 import type { TextGenerator } from './application/ports/out/text-generator.js';
 import { DiagramGenerator } from './application/services/diagram-generator.js';
+import { MeetingAnalyzer } from './application/services/meeting-analyzer.js';
 import { MeetingSummarizer } from './application/services/meeting-summarizer.js';
 import { CheckHealth } from './application/use-cases/check-health.js';
 import { DeleteMeeting } from './application/use-cases/delete-meeting.js';
@@ -9,6 +10,7 @@ import { FixDiagram } from './application/use-cases/fix-diagram.js';
 import { GetMeeting } from './application/use-cases/get-meeting.js';
 import { ListMeetings } from './application/use-cases/list-meetings.js';
 import { ProcessMeeting } from './application/use-cases/process-meeting.js';
+import { ResumeMeeting } from './application/use-cases/resume-meeting.js';
 import { UpdateDiagram } from './application/use-cases/update-diagram.js';
 import { loadEnv, type Env } from './config/env.js';
 import { buildHttpServer } from './infrastructure/in/http/server.js';
@@ -37,13 +39,15 @@ const logger = new ConsoleLogger();
 // 2. Servicios de aplicación y casos de uso, que reciben los adaptadores a través de sus puertos
 const summarizer = new MeetingSummarizer(textGenerator, { fast: env.MODEL_FAST, main: env.MODEL_MAIN });
 const diagramGenerator = new DiagramGenerator(textGenerator, env.MODEL_MAIN);
+const analyzer = new MeetingAnalyzer(meetingRepository, summarizer, diagramGenerator, logger);
 
 const useCases = {
   checkHealth: new CheckHealth(databaseProbe),
   listMeetings: new ListMeetings(meetingRepository),
   getMeeting: new GetMeeting(meetingRepository),
   deleteMeeting: new DeleteMeeting(meetingRepository),
-  processMeeting: new ProcessMeeting(meetingRepository, audioStore, transcriber, summarizer, diagramGenerator, logger),
+  processMeeting: new ProcessMeeting(meetingRepository, audioStore, transcriber, analyzer, logger),
+  resumeMeeting: new ResumeMeeting(meetingRepository, analyzer),
   fixDiagram: new FixDiagram(meetingRepository, diagramGenerator),
   updateDiagram: new UpdateDiagram(meetingRepository),
 };

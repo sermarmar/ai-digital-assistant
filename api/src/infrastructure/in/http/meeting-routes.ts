@@ -6,6 +6,7 @@ import type { FixDiagramUseCase } from '../../../application/ports/in/fix-diagra
 import type { GetMeetingUseCase } from '../../../application/ports/in/get-meeting.js';
 import type { ListMeetingsUseCase } from '../../../application/ports/in/list-meetings.js';
 import type { ProcessMeetingUseCase } from '../../../application/ports/in/process-meeting.js';
+import type { ResumeMeetingUseCase } from '../../../application/ports/in/resume-meeting.js';
 import type { UpdateDiagramUseCase } from '../../../application/ports/in/update-diagram.js';
 import type { Meeting } from '../../../domain/meeting.js';
 
@@ -20,6 +21,7 @@ export function registerMeetingRoutes(
     getMeeting: GetMeetingUseCase;
     deleteMeeting: DeleteMeetingUseCase;
     processMeeting: ProcessMeetingUseCase;
+    resumeMeeting: ResumeMeetingUseCase;
     fixDiagram: FixDiagramUseCase;
     updateDiagram: UpdateDiagramUseCase;
   },
@@ -54,6 +56,13 @@ export function registerMeetingRoutes(
   app.get('/meetings/:id', async (request) => {
     const { id } = meetingParams.parse(request.params);
     return useCases.getMeeting.execute(id);
+  });
+
+  // Sigue con una reunión que se quedó a medias después de transcribir, sin volver a subir el audio.
+  // Responde 202 como al crearla: el resumen y el diagrama siguen en segundo plano.
+  app.post('/meetings/:id/resume', async (request, reply) => {
+    const { id } = meetingParams.parse(request.params);
+    return reply.status(202).send(await useCases.resumeMeeting.execute(id));
   });
 
   app.delete('/meetings/:id', async (request, reply) => {

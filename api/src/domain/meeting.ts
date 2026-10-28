@@ -23,3 +23,13 @@ export interface MeetingDetail extends Meeting {
   summary: Summary | null;
   diagram: Diagram | null;
 }
+
+/**
+ * Una reunión se puede continuar si se quedó a medias después de transcribir: sin resumen
+ * (falló Claude o se reinició el servidor) o sin diagrama. Si falló antes de tener la
+ * transcripción no se puede, porque el audio no se guarda: hay que volver a subirlo.
+ */
+export function canResume(meeting: MeetingDetail): meeting is MeetingDetail & { transcript: Transcript } {
+  if (meeting.status === 'transcribiendo' || meeting.status === 'resumiendo') return false;
+  return meeting.transcript !== null && (meeting.summary === null || meeting.diagram === null);
+}

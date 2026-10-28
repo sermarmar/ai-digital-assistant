@@ -8,9 +8,10 @@ import type { FixDiagramUseCase } from '../../../application/ports/in/fix-diagra
 import type { GetMeetingUseCase } from '../../../application/ports/in/get-meeting.js';
 import type { ListMeetingsUseCase } from '../../../application/ports/in/list-meetings.js';
 import type { ProcessMeetingUseCase } from '../../../application/ports/in/process-meeting.js';
+import type { ResumeMeetingUseCase } from '../../../application/ports/in/resume-meeting.js';
 import type { UpdateDiagramUseCase } from '../../../application/ports/in/update-diagram.js';
 import { TextGenerationError, UsageLimitError } from '../../../application/ports/out/text-generator.js';
-import { EmptyAudioError, MeetingNotFoundError } from '../../../domain/errors.js';
+import { EmptyAudioError, MeetingNotFoundError, MeetingNotResumableError } from '../../../domain/errors.js';
 import { registerHealthRoutes } from './health-routes.js';
 import { registerMeetingRoutes } from './meeting-routes.js';
 
@@ -24,6 +25,7 @@ export interface HttpUseCases {
   getMeeting: GetMeetingUseCase;
   deleteMeeting: DeleteMeetingUseCase;
   processMeeting: ProcessMeetingUseCase;
+  resumeMeeting: ResumeMeetingUseCase;
   fixDiagram: FixDiagramUseCase;
   updateDiagram: UpdateDiagramUseCase;
 }
@@ -36,6 +38,9 @@ export function buildHttpServer(useCases: HttpUseCases): FastifyInstance {
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof MeetingNotFoundError) {
       return reply.status(404).send({ error: error.message });
+    }
+    if (error instanceof MeetingNotResumableError) {
+      return reply.status(409).send({ error: error.message });
     }
     if (error instanceof ZodError) {
       return reply.status(400).send({ error: 'Petición no válida', detalles: error.issues });

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { formatDate, formatDuration } from '../../application/format';
 import type { ExportFormat } from '../../application/use-cases/export-meeting';
-import { isProcessing, type MeetingDetail } from '../../domain/meeting';
+import { canResume, isProcessing, type MeetingDetail } from '../../domain/meeting';
 import { errorMessage } from '../errors';
 import { goTo } from '../routing';
 import { useServices } from '../services';
@@ -19,10 +19,11 @@ interface MeetingPageProps {
 }
 
 export function MeetingPage({ meetingId, onMeetingsChanged }: MeetingPageProps) {
-  const { getMeeting, deleteMeeting, exportMeeting } = useServices();
+  const { getMeeting, deleteMeeting, resumeMeeting, exportMeeting } = useServices();
   const [meeting, setMeeting] = useState<MeetingDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [resuming, setResuming] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const reload = useCallback(() => setReloadKey((key) => key + 1), []);
 
@@ -65,6 +66,22 @@ export function MeetingPage({ meetingId, onMeetingsChanged }: MeetingPageProps) 
       goTo({ page: 'new' });
     } catch (error) {
       setActionError(errorMessage(error));
+    }
+  }
+
+  // La reunión pasa a "resumiendo": al recargarla se ven los pasos y se sigue consultando hasta que acabe
+  async function handleResume() {
+    if (!meeting) return;
+    setActionError(null);
+    setResuming(true);
+    try {
+      await resumeMeeting.execute(meeting.id);
+      onMeetingsChanged();
+      reload();
+    } catch (error) {
+      setActionError(errorMessage(error));
+    } finally {
+      setResuming(false);
     }
   }
 
@@ -116,16 +133,8 @@ export function MeetingPage({ meetingId, onMeetingsChanged }: MeetingPageProps) 
 
       {isProcessing(meeting.status) && <ProcessingSteps status={meeting.status} />}
 
-      {meeting.errorMessage && (
-        <div
-          className={`rounded-lg border p-4 text-sm ${
-            meeting.status === 'error'
-              ? 'border-rose-200 bg-rose-50 text-rose-900'
-              : 'border-amber-200 bg-amber-50 text-amber-900'
-          }`}
-        >
-          {meeting.errorMessage}
-        </div>
+      {(meeting.errorMessage || canResume(meeting)) && (
+        <ProblemNotice meeting={meeting} resuming={resuming} onResume={() => void handleResume()} />
       )}
 
       {ready && (
@@ -172,6 +181,60 @@ function ProcessingSteps({ status }: { status: 'transcribiendo' | 'resumiendo' }
       <p className="mt-4 text-xs text-slate-500">
         Puede tardar varios minutos en reuniones largas. Puedes cerrar esta página: el procesado sigue en el servidor.
       </p>
+    </div>
+  );
+}
+
+// El error (o el aviso, si la reunión quedó lista sin diagrama) y qué se puede hacer a partir de ahí
+function ProblemNotice({
+  meeting,
+  resuming,
+  onResume,
+}: {
+  meeting: MeetingDetail;
+  resuming: boolean;
+  onResume: () => void;
+}) {
+  const failed = meeting.status === 'error';
+  const resumable = canResume(meeting);
+
+  return (
+    <div
+      className={`rounded-lg border p-4 text-sm ${
+        failed ? 'border-rose-200 bg-rose-50 text-rose-900' : 'border-amber-200 bg-amber-50 text-amber-900'
+      }`}
+    >
+      {meeting.errorMessage && <p>{meeting.errorMessage}</p>}
+
+      {resumable && (
+        <div
+          className={`mt-3 flex flex-wrap items-center justify-between gap-3 border-t pt-3 ${
+            failed ? 'border-rose-200' : 'border-amber-200'
+          }`}
+        >
+          <p className="max-w-xl">
+            {meeting.summary
+              ? 'El resumen está guardado. Al continuar, Claude vuelve a intentar el esquema.'
+              : 'La transcripción está guardada. Al continuar, Claude hace el resumen y el esquema sin volver a transcribir el audio.'}
+          </p>
+          <button
+            type="button"
+            disabled={resuming}
+            onClick={onResume}
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {resuming && <Spinner />}
+            Continuar
+          </button>
+        </div>
+      )}
+
+      {failed && !meeting.transcript && (
+        <p className="mt-2">
+          Falló antes de tener la transcripción y el audio no se guarda, así que para intentarlo otra vez hay que
+          volver a subirlo.
+        </p>
+      )}
     </div>
   );
 }

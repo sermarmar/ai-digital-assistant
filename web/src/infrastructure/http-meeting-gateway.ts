@@ -25,6 +25,10 @@ export class HttpMeetingGateway implements MeetingGateway {
     return withDate(await request<MeetingJson>('/meetings', { method: 'POST', body: form }));
   }
 
+  async resume(meetingId: string): Promise<Meeting> {
+    return withDate(await request<MeetingJson>(`/meetings/${meetingId}/resume`, { method: 'POST' }));
+  }
+
   async delete(meetingId: string): Promise<void> {
     await request<void>(`/meetings/${meetingId}`, { method: 'DELETE' });
   }

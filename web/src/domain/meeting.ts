@@ -50,3 +50,10 @@ export interface MeetingDetail extends Meeting {
 export function isProcessing(status: MeetingStatus): status is 'transcribiendo' | 'resumiendo' {
   return status === 'transcribiendo' || status === 'resumiendo';
 }
+
+// La misma regla que canResume en el dominio de api: se puede continuar si se quedó a medias
+// después de transcribir. Sin transcripción no, porque el audio no se guarda.
+export function canResume(meeting: MeetingDetail): boolean {
+  if (isProcessing(meeting.status)) return false;
+  return meeting.transcript !== null && (meeting.summary === null || meeting.diagram === null);
+}

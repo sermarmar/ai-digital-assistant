@@ -12,6 +12,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "web"],
       "port": 5173
+    },
+    {
+      "name": "verificacion-continuar",
+      "runtimeExecutable": "C:/Program Files/Git/bin/bash.exe",
+      "runtimeArgs": ["C:/Users/SERGIO~1.MMA/AppData/Local/Temp/claude/C--Users-sergio-mmartin--claude-spares-spare-K2efvG/cd52a013-8046-4f6c-b723-9a7bfd034869/scratchpad/verificacion/arrancar.sh"],
+      "port": 5180
     }
   ]
 }

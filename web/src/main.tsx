@@ -7,6 +7,7 @@ import { GetMeeting } from './application/use-cases/get-meeting';
 import { ListMeetings } from './application/use-cases/list-meetings';
 import { PrepareDiagram } from './application/use-cases/prepare-diagram';
 import { RenderDiagram } from './application/use-cases/render-diagram';
+import { ResumeMeeting } from './application/use-cases/resume-meeting';
 import { SaveDiagram } from './application/use-cases/save-diagram';
 import { StartRecording } from './application/use-cases/start-recording';
 import { UploadMeeting } from './application/use-cases/upload-meeting';
@@ -30,6 +31,7 @@ const services: AppServices = {
   getMeeting: new GetMeeting(gateway),
   deleteMeeting: new DeleteMeeting(gateway),
   uploadMeeting: new UploadMeeting(gateway),
+  resumeMeeting: new ResumeMeeting(gateway),
   startRecording: new StartRecording(audioCapture),
   prepareDiagram: new PrepareDiagram(renderer, gateway),
   renderDiagram: new RenderDiagram(renderer),
