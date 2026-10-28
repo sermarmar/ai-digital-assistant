@@ -12,7 +12,10 @@ npm install --prefix web
 
 # Entorno de Python solo para stt, para no mezclar sus paquetes con los del sistema
 [[ -d stt/.venv ]] || python3 -m venv stt/.venv
-stt/.venv/bin/pip install -r stt/requirements.txt
+# En Windows, venv deja los ejecutables en Scripts/ en lugar de bin/
+VENV_BIN=stt/.venv/bin
+[[ -d stt/.venv/Scripts ]] && VENV_BIN=stt/.venv/Scripts
+"$VENV_BIN/pip" install -r stt/requirements.txt
 
 if [[ ! -f .env ]]; then
   cp .env.example .env

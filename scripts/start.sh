@@ -3,8 +3,13 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# En Windows, venv deja los ejecutables en Scripts/ en lugar de bin/
+VENV_BIN=stt/.venv/bin
+[[ -d stt/.venv/Scripts ]] && VENV_BIN=stt/.venv/Scripts
+
 [[ -f .env ]] || { echo "Falta .env: ejecuta antes scripts/setup.sh"; exit 1; }
-[[ -d stt/.venv ]] || { echo "Falta el entorno de Python de stt: ejecuta antes scripts/setup.sh"; exit 1; }
+# Se comprueba uvicorn y no solo la carpeta, porque el entorno puede existir sin los paquetes instalados
+[[ -x "$VENV_BIN/uvicorn" ]] || { echo "Falta el entorno de Python de stt: ejecuta antes scripts/setup.sh"; exit 1; }
 
 # stt lee su configuración (WHISPER_*) del entorno; api la lee él mismo con --env-file
 set -a
@@ -21,7 +26,7 @@ STT_PORT="${STT_URL##*:}"
 API_PORT="${API_PORT:-3000}"
 
 # La primera vez descarga el modelo de Whisper a data/models, y tarda unos minutos
-HF_HOME="$PWD/data/models" stt/.venv/bin/uvicorn app.main:app --app-dir stt --host 127.0.0.1 --port "$STT_PORT" &
+HF_HOME="$PWD/data/models" "$VENV_BIN/uvicorn" app.main:app --app-dir stt --host 127.0.0.1 --port "$STT_PORT" &
 node --env-file=.env api/dist/main.js &
 # Vite redirige /api a esta dirección (ver web/vite.config.ts)
 API_URL="http://127.0.0.1:$API_PORT" npm run dev --prefix web &
